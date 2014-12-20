@@ -10,9 +10,17 @@ namespace npl {
  *
  * @return Estimated Partial Correlation Matrix
  */
-VectorXd shootingEstimate(const MatrixXd& corr)
+VectorXd shootingEstimate(const MatrixXd& X, const VectorXd& Y)
 {
+	VectorXd beta(X.cols());
 	
+	for(size_t jj=0; jj<X.cols(); jj++) {
+		double YtXj = Y.transpose()*X.col(jj);
+		if((fabs(YtXj)-gamma) > 0)
+			beta[jj] = sign(YtXj)*(fabs(YtXj)-gamma)/X.col(jj).normSquared();
+		else
+			beta[jj] = 0;
+	}
 	return corr;
 }
 

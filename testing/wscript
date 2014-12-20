@@ -1,6 +1,11 @@
 
 def build(bld):
+#    bld.program(install_path='${PREFIX}/tests', features='test', 
+#            target='shooting_test', 
+#            source='shooting_test.cpp', 
+#            use='EIGEN')
+
     bld.program(install_path='${PREFIX}/tests', features='test', 
-            target='shooting_test', 
-            source='shooting_test.cpp', 
-            use='EIGEN')
+            target='lanczos_test1', 
+            source='lanczos_test1.cpp', 
+            use='matdec')

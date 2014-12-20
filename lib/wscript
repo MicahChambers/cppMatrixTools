@@ -1,6 +1,10 @@
 
 def build(bld):
-    bld.shlib(target = 'pcor',
-            source = 'pcor.cpp',
+#    bld.shlib(target = 'pcor',
+#            source = 'pcor.cpp',
+#            use='EIGEN',
+#            export_includes = ['.'])
+    bld.shlib(target = 'matdec',
+            source = 'matrix_decomps.cpp',
             use='EIGEN',
             export_includes = ['.'])
