@@ -1,4 +1,4 @@
-pcor-estimate
-=============
+cppMatrixTools
+==============
 
-This is a C++ library, using EIGEN to estimate large, sparse partial correlation matrices, using activate shooting.
+This is a C++ library, using EIGEN to operate on large matrices.
