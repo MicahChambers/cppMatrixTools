@@ -22,12 +22,15 @@
 #include <unordered_map>
 #include <vector>
 #include <cmath>
+#include <iostream>
 
 #include "matrix_decomps.h"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using Eigen::NoChange;
+
+using namespace std;
 
 namespace npl 
 {
@@ -54,7 +57,22 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, size_t estbase)
 {
 	if(estbase == 0)
 		estbase = A.rows();
+
+	// Create Random Matrix
 	MatrixXd V(A.rows(), estbase);
+	V.setRandom();
+
+	// Normalize, Orthogonalize Each Column
+	for(size_t cc=0; cc<V.cols(); cc++) {
+		// Orthogonalize
+		for(size_t jj=0; jj<cc; jj++) {
+			double vc_vj = V.col(cc).dot(V.col(jj));
+			V.col(cc) -= V.col(jj)*vc_vj;
+		}
+		// Normalize
+		V.col(cc).normalize();
+	}
+
 	solve(A, V);
 }
 
@@ -89,11 +107,12 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, size_t estbase)
  */
 void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 {
-	const double dtol = 1e-20;
+	const double dtol = 1e-10;
 
 	// I in text, the iterators to nonzero rows of T(d) as well as the index
 	// of them in nonzero_i
 	std::list<int64_t> nonzero;
+	int64_t pc = V.cols(); 
 
 	// We are going to continuously grow these as more Lanczos Vectors are
 	// computed
@@ -103,11 +122,11 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 	Eigen::SelfAdjointEigenSolver<MatrixXd> solver;
 
 	// V is the list of candidates
-	int64_t pc = V.size(); 
 	VectorXd band(pc); // store values in the band T[jj,jj-pc] to T[jj, jj-1]
 	int64_t jj=0;
 
 	while(pc > 0) {
+		cerr << "j=" << jj << ", pc=" << pc << endl;
 		if(jj+pc >= csize) {
 			// Need to Grow
 			csize *= 2;
@@ -116,17 +135,19 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 		}
 
 		// (3) compute ||v_j||
-		double Vjnorm = V.row(jj).norm();
+		double Vjnorm = V.col(jj).norm();
+		cerr << "Norm: " << Vjnorm << endl;
 
 		// decide if vj should be deflated
 		if(Vjnorm < dtol) {
+			cerr << "Deflating" << endl << V.col(jj).transpose() << endl << endl;
 
 			// if j-pc > 0 (switch to 0 based indexing), I = I U {j-pc}
 			if(jj-pc>= 0)
 				nonzero.push_back(jj-pc);
 
 			// set pc = pc - 1
-			if(--pc== 0) {
+			if(--pc == 0) {
 				// if pc==0 set j = j-1 and stop
 				jj--;
 				break;
@@ -138,7 +159,7 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 			// NOTE THAT THIS DOESN't HAPPEN MUCH SO WE DON'T WORRY AOBUT THE
 			// LINEAR TIME NECESSARY
 			for(int64_t cc = jj; cc<jj+pc; cc++)
-				V.row(cc) = V.row(cc+1);
+				V.col(cc) = V.col(cc+1);
 			continue;
 		}
 
@@ -148,24 +169,39 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 			approx(jj, jj-pc) = Vjnorm;
 		
 		// normalize vj = vj/t{j,j-pc}
-		V.row(jj) /= Vjnorm;
+		V.col(jj) /= Vjnorm;
 
+		/************************************************************
+		 * Orthogonalize Candidate Vectors Against Vj 
+		 * and make T(j,k-pc) = V(j).V(k) for k = j+1, ... jj+pc
+		 * or say T(j,k) = V(j).V(k+pc) for k = j-pc, ... jj-1
+		 ************************************************************/
 		// for k = j+1, j+2, ... j+pc-1
+		cerr << "Orthogonalized Candidates: " << endl;
 		for(int64_t kk=jj+1; kk<jj+pc; kk++) {
 			// set t_{j,k-pc} = v^T_j v_k
-			double vj_vk = V.row(jj).dot(V.row(kk));
+			double vj_vk = V.col(jj).dot(V.col(kk));
 			band[kk-pc-(jj-pc)] = vj_vk;
 			
 			if(kk-pc >= 0)
 				approx(jj,kk-pc) = vj_vk;
 
 			// v_k = v_k - v_j t_{j,k-p_c}
-			V.row(kk) -= V.row(jj)*vj_vk;
+			V.col(kk) -= V.col(jj)*vj_vk;
 		}
+		cerr << V.block(0, jj+1, V.rows(), pc-1).transpose() << endl;
 
+		/************************************************************
+		 * Create a New Candidate Vector by transforming current
+		 ***********************************************************/
 		// compute v_{j+pc} = A v_j
-		V.row(jj+pc) = A*V.row(jj);
+		V.col(jj+pc) = A*V.col(jj);
+		cerr << "\nNew Candidate: " << endl;
+		cerr << V.col(jj+pc).transpose() << endl << endl;
 
+		/*******************************************************
+		 * Fill Off Diagonals with reflection T(k,j) = 
+		 *******************************************************/
 		// set k_0 = max{1,j-pc} for k = k_0,k_0+1, ... j-1 set
 		for(int64_t kk = std::max(0l, jj-pc); kk < jj; kk++) {
 
@@ -174,38 +210,51 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 			approx(kk, jj) = t_kj;
 
 			// v_{j+pc} = v_{j+pc} - v_k t_{k,j}
-			V.row(jj+pc) -= V.row(kk)*t_kj;
+			V.col(jj+pc) -= V.col(kk)*t_kj;
 		}
 
 		// for k in I 
 		for(auto kk: nonzero) {
 			// t_{k,j} = v_k v_{j+pc}
-			double vk_vjpc = V.row(kk).dot(V.row(jj+pc));
+			double vk_vjpc = V.col(kk).dot(V.col(jj+pc));
+			approx(kk, jj) = vk_vjpc;
 
 			// v_{j+pc} = v_{j+pc} - v_k t_{k,j}
-			V.row(jj+pc) -= V.row(kk)*vk_vjpc;
+			V.col(jj+pc) -= V.col(kk)*vk_vjpc;
 		}
 		// include jj 
 		{
 			// t_{k,j} = v_k v_{j+pc}
-			double vk_vjpc = V.row(jj).dot(V.row(jj+pc));
+			double vk_vjpc = V.col(jj).dot(V.col(jj+pc));
+			approx(jj, jj) = vk_vjpc;
 			
 			// v_{j+pc} = v_{j+pc} - v_k t_{k,j}
-			V.row(jj+pc) -= V.row(jj)*vk_vjpc;
+			V.col(jj+pc) -= V.col(jj)*vk_vjpc;
 		}
 
 		// for k in I, set s_{j,k} = t_{k,j}
 		for(auto kk: nonzero)
 			approx(jj, kk) = approx(kk, jj);
+		cerr << "\nNew Candidate (Orth): " << endl;
+		cerr << V.col(jj+pc).transpose() << endl << endl;
 
-		/// CHECK CONVERGENCE
-		solver.compute(approx.topLeftCorner(jj+1, jj+1));
-		
-		// Project Eigenvectors through V
-		A*V.topLeftCorner(V.rows(), jj+1)*solver.eigenvectors();
+//		/// CHECK CONVERGENCE
+//		solver.compute(approx.topLeftCorner(jj+1, jj+1));
+//		
+//		// Project Eigenvectors through V
+//		A*V.topLeftCorner(V.rows(), jj+1)*solver.eigenvectors();
+		jj++;
 	}
+	approx.conservativeResize(jj+1, jj+1);
 	V.conservativeResize(NoChange, jj+1);
+	solver.compute(approx);
+	evals = solver.eigenvalues();
+	evecs = V*solver.eigenvectors();
 
+	cerr << "T (Similar to A) " << endl << approx << endl;
+	cerr << "A projected " << endl << V.transpose()*A*V << endl;
+	cerr << "EigenValues: " << endl << evals << endl << endl;
+	cerr << "EigenVectors: " << endl << evecs << endl << endl;
 }
 
 }

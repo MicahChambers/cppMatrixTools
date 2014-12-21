@@ -79,7 +79,11 @@ int main(int argc, char** argv)
 	cerr << "Eigen's Solution: " << endl << solver.eigenvectors() << endl 
 		<< endl << solver.eigenvalues() << endl;
 
-	BandLanczosEigenSolver blsolver(A);
+	MatrixXd evs = solver.eigenvectors();
+
+	BandLanczosEigenSolver blsolver;
+	blsolver.solve(A, evs);
+
 	cerr << "My Solution: " << endl << blsolver.eigenvectors() << endl 
 		<< endl << blsolver.eigenvalues() << endl;
 }
