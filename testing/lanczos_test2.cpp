@@ -83,9 +83,10 @@ int main(int argc, char** argv)
 	cerr << "Done ("<<t<<")"<<endl;
 
 	BandLanczosEigenSolver blsolver;
+	blsolver.setRandomBasisSize(nbasis);
 	cerr << "Computing with BandLanczos";
 	t = clock();
-	blsolver.solve(A,  nbasis);
+	blsolver.solve(A);
 	t = clock()-t;
 	MatrixXd bvecs = blsolver.eigenvectors();
 	VectorXd bvals = blsolver.eigenvalues();

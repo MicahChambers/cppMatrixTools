@@ -17,6 +17,8 @@
  * computation.
  *
  *****************************************************************************/
+#define VERYDEBUG
+
 #include <iostream>
 #include <vector>
 
@@ -85,8 +87,9 @@ int main(int argc, char** argv)
 
 	BandLanczosEigenSolver blsolver;
 	cerr << "Computing with BandLanczos";
+	blsolver.setRandomBasisSize(nbasis);
 	t = clock();
-	blsolver.solve(A,  nbasis);
+	blsolver.solve(A);
 	t = clock()-t;
 	MatrixXd bvecs = blsolver.eigenvectors();
 	VectorXd bvals = blsolver.eigenvalues();
