@@ -121,6 +121,9 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, size_t estbase)
  *     test for convergence
  * end for
  *
+ * TODO add iteration limit
+ * TODO speed up?
+ *
  * @param V input/output the initial and final vectors
  */
 void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
@@ -283,8 +286,8 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 	evals = solver.eigenvalues();
 	evecs = V*solver.eigenvectors();
 
-#ifdef VERYDEBUG
 	cerr << "T (Similar to A) " << endl << approx << endl;
+#ifdef VERYDEBUG
 	cerr << "A projected " << endl << V.transpose()*A*V << endl;
 	cerr << "EigenValues: " << endl << evals << endl << endl;
 	cerr << "EigenVectors: " << endl << evecs << endl << endl;
