@@ -32,8 +32,26 @@ using Eigen::NoChange;
 
 using namespace std;
 
+//#define VERYDEBUG 
+
 namespace npl 
 {
+
+/**
+ * @brief Changes the eigenvalue corresponding to the provided eigenvector 
+ * by dlambda. This could be used to ADD an eigenvalue/eigenvector pair, or 
+ * to REMOVE (deflate) one for further analysis.
+ *
+ * @param A Matrix to modify
+ * @param ev Eigenvector whose eigenvalue will be shifted
+ * @param dlambda Change in eigenvalue
+ */
+void shiftEigenValue(MatrixXd& A, VectorXd& ev, double dlambda)
+{
+	(void)A;
+	(void)ev;
+	(void)dlambda;
+}
 
 /**
  * @brief Constructor for Band Lanczos Eigen Solver 
@@ -107,7 +125,7 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, size_t estbase)
  */
 void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 {
-	const double dtol = 1e-10;
+	const double dtol = 1e-12;
 
 	// I in text, the iterators to nonzero rows of T(d) as well as the index
 	// of them in nonzero_i
@@ -126,7 +144,9 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 	int64_t jj=0;
 
 	while(pc > 0) {
+#ifdef VERYDEBUG
 		cerr << "j=" << jj << ", pc=" << pc << endl;
+#endif //VERYDEBUG
 		if(jj+pc >= csize) {
 			// Need to Grow
 			csize *= 2;
@@ -136,11 +156,15 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 
 		// (3) compute ||v_j||
 		double Vjnorm = V.col(jj).norm();
+#ifdef VERYDEBUG
 		cerr << "Norm: " << Vjnorm << endl;
+#endif //VERYDEBUG
 
 		// decide if vj should be deflated
 		if(Vjnorm < dtol) {
+#ifdef VERYDEBUG
 			cerr << "Deflating" << endl << V.col(jj).transpose() << endl << endl;
+#endif //VERYDEBUG
 
 			// if j-pc > 0 (switch to 0 based indexing), I = I U {j-pc}
 			if(jj-pc>= 0)
@@ -177,7 +201,9 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 		 * or say T(j,k) = V(j).V(k+pc) for k = j-pc, ... jj-1
 		 ************************************************************/
 		// for k = j+1, j+2, ... j+pc-1
+#ifdef VERYDEBUG
 		cerr << "Orthogonalized Candidates: " << endl;
+#endif //VERYDEBUG
 		for(int64_t kk=jj+1; kk<jj+pc; kk++) {
 			// set t_{j,k-pc} = v^T_j v_k
 			double vj_vk = V.col(jj).dot(V.col(kk));
@@ -189,15 +215,19 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 			// v_k = v_k - v_j t_{j,k-p_c}
 			V.col(kk) -= V.col(jj)*vj_vk;
 		}
+#ifdef VERYDEBUG
 		cerr << V.block(0, jj+1, V.rows(), pc-1).transpose() << endl;
+#endif //VERYDEBUG
 
 		/************************************************************
 		 * Create a New Candidate Vector by transforming current
 		 ***********************************************************/
 		// compute v_{j+pc} = A v_j
 		V.col(jj+pc) = A*V.col(jj);
+#ifdef VERYDEBUG
 		cerr << "\nNew Candidate: " << endl;
 		cerr << V.col(jj+pc).transpose() << endl << endl;
+#endif //VERYDEBUG
 
 		/*******************************************************
 		 * Fill Off Diagonals with reflection T(k,j) = 
@@ -235,8 +265,10 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 		// for k in I, set s_{j,k} = t_{k,j}
 		for(auto kk: nonzero)
 			approx(jj, kk) = approx(kk, jj);
+#ifdef VERYDEBUG
 		cerr << "\nNew Candidate (Orth): " << endl;
 		cerr << V.col(jj+pc).transpose() << endl << endl;
+#endif //VERYDEBUG
 
 //		/// CHECK CONVERGENCE
 //		solver.compute(approx.topLeftCorner(jj+1, jj+1));
@@ -251,10 +283,12 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 	evals = solver.eigenvalues();
 	evecs = V*solver.eigenvectors();
 
+#ifdef VERYDEBUG
 	cerr << "T (Similar to A) " << endl << approx << endl;
 	cerr << "A projected " << endl << V.transpose()*A*V << endl;
 	cerr << "EigenValues: " << endl << evals << endl << endl;
 	cerr << "EigenVectors: " << endl << evecs << endl << endl;
+#endif //VERYDEBUG
 }
 
 }

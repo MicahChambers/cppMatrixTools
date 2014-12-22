@@ -50,13 +50,13 @@ void createRandom(MatrixXd& tgt, size_t rank)
 int main(int argc, char** argv)
 {
 	// Size of Matrix to Compute Eigenvalues of 
-	size_t matsize = 10;
+	size_t matsize = 8;
 
 	// Number of orthogonal vectors to start with
-	size_t nbasis = 10;
+	size_t nbasis = 3;
 
 	// Rank of matrix to construct
-	size_t nrank = 10;
+	size_t nrank = 5;
 	if(argc == 2) {
 		matsize = atoi(argv[1]);
 	} else if(argc == 3) {
@@ -73,17 +73,22 @@ int main(int argc, char** argv)
 
 	MatrixXd A(matsize, matsize);
 	createRandom(A, nrank);
-	cerr << "A: " << endl << A << endl << endl;
+//	cerr << "A: " << endl << A << endl << endl;
 
+	clock_t t = clock();
 	Eigen::SelfAdjointEigenSolver<MatrixXd> solver(A);
-	cerr << "Eigen's Solution: " << endl << solver.eigenvectors() << endl 
-		<< endl << solver.eigenvalues() << endl;
+	t = clock()-t;
+	cerr << "Eigen's Solution (" << t << "): " << endl << solver.eigenvalues() << endl;
+//	cerr << "Eigen's Solution: " << endl << solver.eigenvectors() << endl 
+//		<< endl << solver.eigenvalues() << endl;
 
 	MatrixXd evs = solver.eigenvectors();
 
 	BandLanczosEigenSolver blsolver;
-	blsolver.solve(A, evs);
+	t = clock();
+	blsolver.solve(A,  nbasis);
 
-	cerr << "My Solution: " << endl << blsolver.eigenvectors() << endl 
-		<< endl << blsolver.eigenvalues() << endl;
+	cerr << "My Solution (" << t << "): " << endl << blsolver.eigenvalues() << endl;
+//	cerr << "My Solution: " << endl << blsolver.eigenvectors() << endl 
+//		<< endl << blsolver.eigenvalues() << endl;
 }
