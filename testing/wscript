@@ -9,3 +9,8 @@ def build(bld):
             target='lanczos_test1', 
             source='lanczos_test1.cpp', 
             use='matdec')
+    
+    bld.program(install_path='${PREFIX}/tests', features='test', 
+            target='lanczos_test2', 
+            source='lanczos_test2.cpp', 
+            use='matdec')

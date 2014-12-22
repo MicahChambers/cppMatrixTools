@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @file lanczos_test1.cpp Test the band lanczos algorithm of eigenvector
- * computation.
+ * @file lanczos_test2.cpp Test the band lanczos algorithm of eigenvector
+ * computation in a non-verbose way so larger matrices can be used.
  *
  *****************************************************************************/
+
 #include <iostream>
 #include <vector>
 
@@ -49,13 +50,13 @@ void createRandom(MatrixXd& tgt, size_t rank)
 int main(int argc, char** argv)
 {
 	// Size of Matrix to Compute Eigenvalues of 
-	size_t matsize = 8;
+	size_t matsize = 500;
 
 	// Number of orthogonal vectors to start with
-	size_t nbasis = 3;
+	size_t nbasis = 10;
 
 	// Rank of matrix to construct
-	size_t nrank = 5;
+	size_t nrank = 10;
 	if(argc == 2) {
 		matsize = atoi(argv[1]);
 	} else if(argc == 3) {
@@ -80,8 +81,6 @@ int main(int argc, char** argv)
 	MatrixXd evecs = egsolver.eigenvectors();
 	VectorXd evals = egsolver.eigenvalues();
 	cerr << "Done ("<<t<<")"<<endl;
-	cerr << "Eigen's Solution ("<<t<<"): " << endl << evecs << endl << endl 
-		<< evals << endl;
 
 	BandLanczosEigenSolver blsolver;
 	cerr << "Computing with BandLanczos";
@@ -91,8 +90,6 @@ int main(int argc, char** argv)
 	MatrixXd bvecs = blsolver.eigenvectors();
 	VectorXd bvals = blsolver.eigenvalues();
 	cerr << "Done ("<<t<<")"<<endl;
-	cerr << "My Solution (" << t << "): " << endl << bvecs << endl << endl 
-		<< bvals << endl;
 
 	size_t egrank = evals.rows();
 	size_t blrank = bvals.rows();

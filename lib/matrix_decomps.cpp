@@ -46,7 +46,7 @@ namespace npl
  * @param ev Eigenvector whose eigenvalue will be shifted
  * @param dlambda Change in eigenvalue
  */
-void shiftEigenValue(MatrixXd& A, VectorXd& ev, double dlambda)
+void deflate(MatrixXd& A, VectorXd& ev, double dlambda)
 {
 	(void)A;
 	(void)ev;
@@ -286,8 +286,8 @@ void BandLanczosEigenSolver::solve(const MatrixXd& A, MatrixXd& V)
 	evals = solver.eigenvalues();
 	evecs = V*solver.eigenvectors();
 
-	cerr << "T (Similar to A) " << endl << approx << endl;
 #ifdef VERYDEBUG
+	cerr << "T (Similar to A) " << endl << approx << endl;
 	cerr << "A projected " << endl << V.transpose()*A*V << endl;
 	cerr << "EigenValues: " << endl << evals << endl << endl;
 	cerr << "EigenVectors: " << endl << evecs << endl << endl;
