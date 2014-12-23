@@ -78,7 +78,7 @@ int main(int argc, char** argv)
 	size_t matsize = 8;
 
 	// Number of orthogonal vectors to start with
-	size_t nbasis = 3;
+	size_t nbasis = 5;
 
 	// Rank of matrix to construct
 	size_t nrank = 5;
