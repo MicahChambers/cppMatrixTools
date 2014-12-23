@@ -20,6 +20,7 @@
 
 #include <Eigen/Dense>
 #include <list>
+#include <limits>
 
 namespace npl 
 {
@@ -169,7 +170,7 @@ private:
 	 */
 	void _solve(const MatrixType& A)
 	{
-		const double dtol = 1e-12;
+		const double dtol = sqrt(std::numeric_limits<double>::epsilon());
 		MatrixType& V = m_proj;
 
 		// I in text, the iterators to nonzero rows of T(d) as well as the index

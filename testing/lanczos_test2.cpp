@@ -73,6 +73,8 @@ int main(int argc, char** argv)
 
 	MatrixXd A(matsize, matsize);
 	createRandom(A, nrank);
+	double trace = A.trace();
+	cerr << "Trace=" << trace << endl;
 
 	cerr << "Computing with Eigen::SelfAdjointEigenSolver";
 	clock_t t = clock();
@@ -94,21 +96,23 @@ int main(int argc, char** argv)
 
 	size_t egrank = evals.rows();
 	size_t blrank = bvals.rows();
-
+	
 	cerr << "Comparing"<<endl;
 	for(size_t ii=1; ii<=std::min(bvals.rows(), evals.rows()); ii++) {
-		if(fabs(bvals[blrank-ii] - evals[egrank-ii]) > 0.01) {
-			cerr << "Difference in eigenvalues" << endl;
-			cerr << bvals[blrank-ii] << " vs. " << evals[egrank-ii] << endl;
-			return -1;
+		if(fabs(bvals[blrank-ii])/trace > .01) {
+			if(fabs(bvals[blrank-ii] - evals[egrank-ii])/trace > 0.05) {
+				cerr << "Difference in eigenvalues" << endl;
+				cerr << bvals[blrank-ii] << " vs. " << evals[egrank-ii] << endl;
+				return -1;
+			}
 		}
 	}
 
 	for(size_t ii=1; ii<=std::min(bvals.rows(), evals.rows()); ii++) {
-		if(fabs(bvals[blrank-ii]) > .1) {
+		if(fabs(bvals[blrank-ii])/trace > .01) {
 			double v = fabs(bvecs.col(blrank-ii).dot(evecs.col(egrank-ii)));
 			cerr << ii << " dot prod = " << v << endl;
-			if(fabs(v) < .99) {
+			if(fabs(v) < .95) {
 				cerr << "Difference in eigenvector " << ii << endl;
 				return -1;
 			}
