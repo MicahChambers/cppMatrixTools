@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @file lanczos_test3.cpp Create known eigenvalues/eigenvectors then
- * attempt to find them using the band lanczos algorithm
+ * @file lanczos_test3.cpp Create known eigenvalues in low rank matrix then 
+ * find them using Band Lanczos
  *
  *****************************************************************************/
+#define VERYDEBUG
 
 #include <iostream>
 #include <vector>
@@ -33,30 +34,54 @@ using Eigen::MatrixXd;
 
 /**
  * @brief Fills a matrix with random (but symmetric, positive definite) values
+ *
+ * @param tgt output target matrix
+ * @param evals output eigenvalues that have been used to generate tgt 
+ * @param evecs output eigenvectors that have been used to generate tgt 
+ * @param rank input rank of tgt matrix
  */
-void createRandom(MatrixXd& tgt, size_t rank)
+void createRandom(MatrixXd& tgt, VectorXd& evals, MatrixXd& evecs, size_t rank)
 {
 	assert(tgt.rows() == tgt.cols());
-	VectorXd tmp(tgt.rows());
-	tgt.setZero();
 
+	// Create Outputs to match tgt size
+	evecs.resize(tgt.rows(), rank);
+	evals.resize(rank);
+
+	// Zero Output Matrices
+	tgt.setZero();
+	evecs.setZero();
+	evals.setZero();
+
+	// Create Random EigenVectors/EigenValues the add using Hotellings
+	// 'deflation', although we actually are inflating
 	for(size_t ii=0; ii<rank; ii++) {
-		tmp.setRandom();
-		tmp.normalize();
-		tgt += tmp*tmp.transpose();
+		// Create Eigenvector at random, then orthogonalize and normalize
+		evecs.col(ii).setRandom();
+		for(size_t jj=0; jj<ii; jj++) {
+			double proj = evecs.col(ii).dot(evecs.col(jj));
+			evecs.col(ii) -= proj*evecs.col(jj);
+		}
+		evecs.col(ii).normalize();
+		
+		// Create Random EigenValue 0 to 1
+		double v = rand()/(double)RAND_MAX;
+		evals[ii] = ii == 0 ? v : v + evals[ii-1]; 
+
+		tgt += evals[ii]*evecs.col(ii)*evecs.col(ii).transpose();
 	}
 }
 
 int main(int argc, char** argv)
 {
 	// Size of Matrix to Compute Eigenvalues of 
-	size_t matsize = 500;
+	size_t matsize = 8;
 
 	// Number of orthogonal vectors to start with
-	size_t nbasis = 10;
+	size_t nbasis = 3;
 
 	// Rank of matrix to construct
-	size_t nrank = 10;
+	size_t nrank = 5;
 	if(argc == 2) {
 		matsize = atoi(argv[1]);
 	} else if(argc == 3) {
@@ -72,43 +97,48 @@ int main(int argc, char** argv)
 	}
 
 	MatrixXd A(matsize, matsize);
-	createRandom(A, nrank);
+	MatrixXd evecs;
+	VectorXd evals;
+	createRandom(A, evals, evecs, nrank);
 
-	cerr << "Computing with Eigen::SelfAdjointEigenSolver";
-	clock_t t = clock();
-	Eigen::SelfAdjointEigenSolver<MatrixXd> egsolver(A);
-	t = clock()-t;
-	MatrixXd evecs = egsolver.eigenvectors();
-	VectorXd evals = egsolver.eigenvalues();
-	cerr << "Done ("<<t<<")"<<endl;
+	double trace = A.trace();
+	cerr << "Trace=" << trace << endl;
+	cerr << "Sum of Eigenvals: " << evals.sum() << endl;
+	cerr << "True Eigenvals: " << evals.transpose() << endl;
+	cerr << "True Eigenvectors: " << endl << evecs << endl;
 
 	BandLanczosEigenSolver blsolver;
 	cerr << "Computing with BandLanczos";
-	t = clock();
 	blsolver.setRandomBasisSize(nbasis);
+	clock_t t = clock();
 	blsolver.solve(A);
 	t = clock()-t;
+
 	MatrixXd bvecs = blsolver.eigenvectors();
 	VectorXd bvals = blsolver.eigenvalues();
 	cerr << "Done ("<<t<<")"<<endl;
+	cerr << "My Solution (" << t << "): " << endl << bvecs << endl << endl 
+		<< bvals << endl;
 
 	size_t egrank = evals.rows();
 	size_t blrank = bvals.rows();
 
 	cerr << "Comparing"<<endl;
 	for(size_t ii=1; ii<=std::min(bvals.rows(), evals.rows()); ii++) {
-		if(fabs(bvals[blrank-ii] - evals[egrank-ii]) > 0.01) {
-			cerr << "Difference in eigenvalues" << endl;
-			cerr << bvals[blrank-ii] << " vs. " << evals[egrank-ii] << endl;
-			return -1;
+		if(fabs(bvals[blrank-ii])/trace > .01) {
+			if(fabs(bvals[blrank-ii] - evals[egrank-ii])/trace > 0.05) {
+				cerr << "Difference in eigenvalues" << endl;
+				cerr << bvals[blrank-ii] << " vs. " << evals[egrank-ii] << endl;
+				return -1;
+			}
 		}
 	}
 
 	for(size_t ii=1; ii<=std::min(bvals.rows(), evals.rows()); ii++) {
-		if(fabs(bvals[blrank-ii]) > .1) {
+		if(fabs(bvals[blrank-ii])/trace > .01) {
 			double v = fabs(bvecs.col(blrank-ii).dot(evecs.col(egrank-ii)));
 			cerr << ii << " dot prod = " << v << endl;
-			if(fabs(v) < .99) {
+			if(fabs(v) < .95) {
 				cerr << "Difference in eigenvector " << ii << endl;
 				return -1;
 			}
