@@ -90,11 +90,11 @@ public:
 
 		// Normalize, Orthogonalize Each Column
 		for(size_t cc=0; cc<m_proj.cols(); cc++) {
-			// Orthogonalize
-			for(size_t jj=0; jj<cc; jj++) {
-				double vc_vj = m_proj.col(cc).dot(m_proj.col(jj));
-				m_proj.col(cc) -= m_proj.col(jj)*vc_vj;
-			}
+//			// Orthogonalize
+//			for(size_t jj=0; jj<cc; jj++) {
+//				double vc_vj = m_proj.col(cc).dot(m_proj.col(jj));
+//				m_proj.col(cc) -= m_proj.col(jj)*vc_vj;
+//			}
 
 			// Normalize
 			m_proj.col(cc).normalize();
