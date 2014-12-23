@@ -115,8 +115,8 @@ int main(int argc, char** argv)
 //	cerr << "Done ("<<t<<")"<<endl;
 //	cerr << evals.transpose() << endl;
 //
-	BandLanczosEigenSolver blsolver;
-	cerr << "Computing with BandLanczos";
+	BandLanczosHermitianEigenSolver blsolver;
+	cerr << "Computing with BandLanczosHermitian";
 	blsolver.setRandomBasisSize(nbasis);
 	t = clock();
 	blsolver.solve(A);

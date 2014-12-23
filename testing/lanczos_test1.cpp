@@ -88,8 +88,8 @@ int main(int argc, char** argv)
 	cerr << "Eigen's Solution ("<<t<<"): " << endl << evecs << endl << endl 
 		<< evals << endl;
 
-	BandLanczosEigenSolver blsolver;
-	cerr << "Computing with BandLanczos";
+	BandLanczosHermitianEigenSolver blsolver;
+	cerr << "Computing with BandLanczosHermitian";
 	blsolver.setRandomBasisSize(nbasis);
 	t = clock();
 	blsolver.solve(A);

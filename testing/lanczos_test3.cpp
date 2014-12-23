@@ -107,8 +107,8 @@ int main(int argc, char** argv)
 	cerr << "True Eigenvals: " << evals.transpose() << endl;
 	cerr << "True Eigenvectors: " << endl << evecs << endl;
 
-	BandLanczosEigenSolver blsolver;
-	cerr << "Computing with BandLanczos";
+	BandLanczosHermitianEigenSolver blsolver;
+	cerr << "Computing with BandLanczosHermitian";
 	blsolver.setRandomBasisSize(nbasis);
 	clock_t t = clock();
 	blsolver.solve(A);

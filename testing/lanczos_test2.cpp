@@ -84,9 +84,9 @@ int main(int argc, char** argv)
 	VectorXd evals = egsolver.eigenvalues();
 	cerr << "Done ("<<t<<")"<<endl;
 
-	BandLanczosEigenSolver blsolver;
+	BandLanczosHermitianEigenSolver blsolver;
 	blsolver.setRandomBasisSize(nbasis);
-	cerr << "Computing with BandLanczos";
+	cerr << "Computing with BandLanczosHermitian";
 	t = clock();
 	blsolver.solve(A);
 	t = clock()-t;
