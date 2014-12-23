@@ -57,6 +57,8 @@ public:
 
 	/**
 	 * @brief Constructor that solves A
+	 *
+	 * @param A matrix to solve
 	 */
 	BandLanczosEigenSolver(const MatrixType& A)
 		: m_initbase(10), m_rank(USHRT_MAX),
@@ -69,6 +71,9 @@ public:
 	/**
 	 * @brief Constructor that solves A with the initial projection (Krylov
 	 * basis vectors) set to the columns of V
+	 *
+	 * @param A matrix to solve
+	 * @param V initial projection (causes setRandomBasisSize to be ignored)
 	 */
 	BandLanczosEigenSolver(const MatrixType& A, const MatrixType& V)
 		: m_initbase(10), m_rank(USHRT_MAX),
@@ -77,6 +82,105 @@ public:
 	{
 		m_proj = V;
 		_solve(A);
+	};
+
+	/**
+	 * @brief Constructor that solves A with the initial projection (Krylov
+	 * basis vectors) set to setRandomBasisSize() random vectors 
+	 *
+	 * @param mvfunc Matrix-vector product function. Takes 3 arguments 
+	 * mvfunc(size_t ocol, size_t icol, Matrix inout). It needs to set the
+	 * inout.col(ocol) to the product of A (provided by the user) and
+	 * inout.col(icol). Thus it should effectively be 
+	 * inout.col(ocol) = A*inout.col(icol)
+	 * @param ndim Number of rows in the matrix simulated by mvprod
+	 */
+	BandLanczosEigenSolver(
+			const std::function<void(size_t, size_t, MatrixType&)> mvprod,
+			size_t ndim)
+		: m_initbase(10), m_rank(USHRT_MAX),
+		m_deflation_tol(sqrt(std::numeric_limits<double>::epsilon())),
+		m_trace_stop(INFINITY), m_tracesqr_stop(INFINITY)
+	{
+		solve(mvprod, ndim);
+	};
+
+	/**
+	 * @brief Constructor that solves A with the initial projection (Krylov
+	 * basis vectors) set to the columns of V
+	 *
+	 * @param mvfunc Matrix-vector product function. Takes 3 arguments 
+	 * mvfunc(size_t ocol, size_t icol, Matrix inout). It needs to set the
+	 * inout.col(ocol) to the product of A (provided by the user) and
+	 * inout.col(icol). Thus it should effectively be 
+	 * inout.col(ocol) = A*inout.col(icol)
+	 * @param V initial projection (causes setRandomBasisSize to be ignored)
+	 */
+	BandLanczosEigenSolver(
+			const std::function<void(size_t, size_t, MatrixType&)> mvprod,
+			const MatrixType& V)
+		: m_initbase(10), m_rank(USHRT_MAX),
+		m_deflation_tol(sqrt(std::numeric_limits<double>::epsilon())),
+		m_trace_stop(INFINITY), m_tracesqr_stop(INFINITY)
+	{
+		solve(mvprod, V);
+	};
+
+	/**
+	 * @brief Solves the matrix with the initial projection (Krylov
+	 * basis vectors) set to the random vectors of dimension set by
+	 * setRandomBasis(). This function should only be used of cannot be 
+	 * properly held in memory and therefore has to be approximated somehow
+	 * as a function (mvprod)
+	 *
+	 * @param mvprod Function mvprod(out, in, V) that sets 
+	 * V.col(out) = A*V.col(in) using the matrix that cannot be formed (or is
+	 * stored out of memory -- and thus needs to be a function rather than
+	 * a matrix).
+	 * @param ndim Number of rows in the matrix simulated by mvprod
+	 */
+	void solve(const std::function<void(size_t, size_t, MatrixType&)> mvprod,
+			size_t ndim)
+	{
+		if(m_initbase <= 0) {
+			throw "Invalid initial basis size";
+		}
+
+		// Create Random Matrix
+		m_proj.resize(ndim, m_initbase);
+		m_proj.setRandom();
+
+		// Normalize, Orthogonalize Each Column
+		for(size_t cc=0; cc<m_proj.cols(); cc++) {
+			// Orthogonalize
+			for(size_t jj=0; jj<cc; jj++) {
+				double vc_vj = m_proj.col(cc).dot(m_proj.col(jj));
+				m_proj.col(cc) -= m_proj.col(jj)*vc_vj;
+			}
+
+			// Normalize
+			m_proj.col(cc).normalize();
+		}
+
+		_solve(mvprod);
+	};
+
+	/**
+	 * @brief Solves A with the initial projection (Krylov
+	 * basis vectors) set to the random vectors of dimension set by
+	 * setRandomBasis()
+	 *
+	 * @param mvprod Function mvprod(out, in, V) that sets 
+	 * V.col(out) = A*V.col(in) using the matrix that cannot be formed (A, or is
+	 * stored out of memory -- and thus needs to be a function rather than
+	 * a matrix).
+	 * @param V Basis to constuct Kyrlov space from
+	 */
+	void solve(const std::function<void(size_t, size_t, MatrixType&)> mvprod,
+				const MatrixType& V)
+	{
+		m_proj = V;
+		_solve(mvprod);
 	};
 
 	/**
@@ -211,6 +315,19 @@ public:
 	 */
 	double getTraceSqrStop() { return m_tracesqr_stop; };
 private:
+	
+	/**
+	 * @brief Solve using a plain old matrix
+	 *
+	 * @param A
+	 */
+	void _solve(const MatrixType& A)
+	{
+		_solve([&](size_t ocol, size_t icol, MatrixType& V)
+		{ 
+			V.col(ocol) = A*V.col(icol);
+		});
+	};
 
 	/**
 	 * @brief Band Lanczos Methof for Hessian Matrices
@@ -241,7 +358,7 @@ private:
 	 *
 	 * @param A Matrix to decompose
 	 */
-	void _solve(const MatrixType& A)
+	void _solve(std::function<void(size_t, size_t, MatrixType&)> mvfunc)
 	{
 		MatrixType& V = m_proj;
 
@@ -344,7 +461,8 @@ private:
 			 * Create a New Candidate Vector by transforming current
 			 ***********************************************************/
 			// compute v_{j+pc} = A v_j
-			V.col(jj+pc) = A*V.col(jj);
+//			V.col(jj+pc) = A*V.col(jj);
+			mvfunc(jj+pc, jj, V);
 #ifdef VERYDEBUG
 			std::cerr << "\nNew Candidate: " << std::endl;
 			std::cerr << V.col(jj+pc).transpose() << std::endl << std::endl;
@@ -429,7 +547,7 @@ private:
 
 #ifdef VERYDEBUG
 		std::cerr << "T (Similar to A) " << std::endl << approx << std::endl;
-		std::cerr << "A projected " << std::endl << V.transpose()*A*V << std::endl;
+//		std::cerr << "A projected " << std::endl << V.transpose()*A*V << std::endl;
 		std::cerr << "EigenValues: " << std::endl << m_evals << std::endl << std::endl;
 		std::cerr << "EigenVectors: " << std::endl << m_evecs << std::endl << std::endl;
 #endif //VERYDEBUG
