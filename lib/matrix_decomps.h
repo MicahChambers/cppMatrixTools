@@ -18,6 +18,9 @@
  *
  *****************************************************************************/
 
+#ifndef MATRIX_DECOMPS_H
+#define MATRIX_DECOMPS_H
+
 #include <Eigen/Dense>
 #include <list>
 #include <limits>
@@ -590,3 +593,5 @@ private:
 	MatrixType m_proj; // Computed Projection Matrix (V)
 };
 }
+
+#endif //MATRIX_DECOMPS_H
