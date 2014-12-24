@@ -592,6 +592,47 @@ private:
 	MatrixType m_evecs;
 	MatrixType m_proj; // Computed Projection Matrix (V)
 };
+
+class TruncatedSVD
+{
+public:
+	void addSamples(const MatrixType& X)
+	{
+		if(m_compute_XT_X)
+			sum += X.transpose()*X;
+		else if(m_compute_X_XT)
+			sum += X.transpose()*X;
+		else {
+			sum.setZero();
+			if(X.rows() >= X.cols()) {
+				m_compute_XT_X = true;
+				sum += X.transpose()*X;
+			} else {
+				m_compute_X_XT = true;
+				sum += X*X.transpose();
+			}
+		}
+	};
+
+	void compute()
+	{
+		// find leading eigenvalues/eigenvectors
+		
+		if(m_compute_XT_X) {
+			// right singular values = eigenvectors
+		} else if(m_compute_X_XT) {
+			// left singular values = eigenvectors
+		} else {
+			throw "ERROR NO SAMPLES ADDED!";
+		}
+	};
+
+private:
+	bool m_compute_XT_X;
+	bool m_compute_X_XT;
+	MatrixType sum;
+};
+
 }
 
 #endif //MATRIX_DECOMPS_H
