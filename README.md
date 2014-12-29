@@ -1,4 +1,9 @@
 cppMatrixTools
 ==============
+No longer used, these algorithms are being incorporated into Eigen. 
 
-This is a C++ library, using EIGEN to operate on large matrices.
+See
+
+https://bitbucket.org/eigen/eigen/
+
+https://bitbucket.org/micahc/eigen/
